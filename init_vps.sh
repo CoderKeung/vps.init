@@ -98,6 +98,7 @@ has_v2ray
 has_nginx
 has_acmesh
 config_nginx
+add_user
 
 NGINXPATH="/etc/nginx/servers/"
 V2RAYPATH="/etc/v2ray/"
