@@ -135,7 +135,7 @@ EOF
   ~/.acme.sh/acme.sh  --install-cert -d $DOMAIN --ecc \
     --key-file       $KEYFILE  \
     --fullchain-file $CERTFILE \
-    --reloadcmd     "service nginx force-reload"
+    --reloadcmd     "systemctl restart nginx"
   [[ -f $CERTFILE && -f $KEYFILE ]] || {
     error "Failed to obtain certificate, please go to https://hijk.art for feedback"
     exit 1
