@@ -162,7 +162,7 @@ function get_user_info() {
   su - $USERNAME -c "mkdir -p $WEBSITEPATH/site"
   input
   read -r -p "Please input your v2ray websocket path[default: api]: " websocketpath
-  WEBSOCKETPATH=${websocket:-"api"}
+  WEBSOCKETPATH=${websocketpath:-"api"}
   su - $USERNAME -c "mkdir -p $WEBSITEPATH/site/$WEBSOCKETPATH"
   input 
   read -r -p "Please input your port want to set v2ray[default: 8888]: " port
@@ -178,6 +178,8 @@ add_user
 config_nginx
 get_user_info
 get_acmesh
+
+chmod o+x $USERHOMEPATH
 
 V2RAYPATH="/etc/v2ray"
 cat >$V2RAYPATH"/config.json"<<EOF
