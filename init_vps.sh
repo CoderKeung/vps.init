@@ -148,6 +148,8 @@ server {
   }
 }
 EOF
+  systemctl enable nginx
+  systemctl start nginx
   su - $USERNAME <<-EOF
     acme.sh --set-default-ca --server letsencrypt
     acme.sh --issue -d $DOMAIN -w $WEBSITEPATH/site --keylength ec-256 --force
@@ -281,7 +283,6 @@ server {
 }
 EOF
 
-systemctl enable nginx
-systemctl start nginx
+systemctl restart nginx
 systemctl enable v2ray
 systemctl start v2ray
