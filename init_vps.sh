@@ -123,6 +123,8 @@ server {
 }
 EOF
   sleep 2
+  systemctl start cronie
+  systemctl enable cronie
   curl -sL https://get.acme.sh | sh -s email=coderkeung@gmail.com
   source ~/.bashrc
   ~/.acme.sh/acme.sh  --upgrade  --auto-upgrade
@@ -175,8 +177,7 @@ function get_user_info() {
 add_user
 config_nginx
 get_user_info
-config_acmesh
-
+get_acmesh
 
 V2RAYPATH="/etc/v2ray"
 cat >$V2RAYPATH"/config.json"<<EOF
