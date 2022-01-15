@@ -10,37 +10,11 @@ source ./util.sh
 #=============================================
 # INSTALL REQUIRE PACKAGE
 #=============================================
-function has_nginx() {
-  local package=`pacman -Qq | grep "nginx"`
-  if [ $package ]; then
-    ok "Has" "nginx"
-  else
-    error "No" "nginx"
-    run "Start install" "nginx"
-    pacman -S nginx
-  fi
-}
-function has_v2ray() {
-  local package=`pacman -Qq | grep "v2ray$"`
-  if [ $package ]; then
-    ok "Has" "v2ray"
-  else
-    error "No" "v2ray"
-    run "Start install" "v2ray"
-    pacman -S v2ray
-  fi
-}
-function has_acmesh() {
-  local package=`pacman -Qq | grep "acme.sh"`
-  if [ $package ]; then
-    ok "Has" "acme.sh"
-  else
-    error "No" "acme.sh"
-    run "Start install" "acme.sh"
-    pacman -S acme.sh
-  fi
-}
-
+has_package nginx
+has_package v2ray
+has_package socat
+has_package openssl
+has_package cronie
 
 #=============================================
 # ADD NEW USER
@@ -136,7 +110,7 @@ EOF
 #=============================================
 # CONFIG ACMESH
 #=============================================
-function config_acmesh() {
+function get_acmesh() {
   cat > $NGINXSERVER"/"$DOMAIN".conf" <<-EOF
 server {
   listen 80;
@@ -148,15 +122,22 @@ server {
   }
 }
 EOF
-  systemctl enable nginx
-  systemctl start nginx
-  su - $USERNAME <<-EOF
-    acme.sh --set-default-ca --server letsencrypt
-    acme.sh --issue -d $DOMAIN -w $WEBSITEPATH/site --keylength ec-256 --force
-    SSLPATH="$WEBSITEPATH/ssl"
-    mkdir -p $SSLPATH
-    acme.sh "--install-cert -d ${DOMAIN} --ecc --fullchain-file $SSLPATH/$DOMAIN.crt --key-file $SSLPATH/$DOMAIN.key"
-EOF
+  sleep 2
+  curl -sL https://get.acme.sh | sh -s email=coderkeung@gmail.com
+  source ~/.bashrc
+  ~/.acme.sh/acme.sh  --upgrade  --auto-upgrade
+  ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
+  ~/.acme.sh/acme.sh   --issue -d $DOMAIN --keylength ec-256 --pre-hook "systemctl stop nginx" --post-hook "systemctl restart nginx"  --standalone
+  CERTFILE="$WEBSITEPATH/ssl/${DOMAIN}.crt"
+  KEYFILE="$WEBSITEPATH/ssl/${DOMAIN}.key"
+  ~/.acme.sh/acme.sh  --install-cert -d $DOMAIN --ecc \
+    --key-file       $KEYFILE  \
+    --fullchain-file $CERTFILE \
+    --reloadcmd     "service nginx force-reload"
+  [[ -f $CERTFILE && -f $KEYFILE ]] || {
+    error "Failed to obtain certificate, please go to https://hijk.art for feedback"
+    exit 1
+  }
 }
 
 #=============================================
@@ -191,9 +172,6 @@ function get_user_info() {
 #=============================================
 # START CONFIGURATION
 #=============================================
-has_nginx
-has_v2ray
-has_acmesh
 add_user
 config_nginx
 get_user_info
@@ -259,8 +237,8 @@ server {
   ssl_session_cache shared:SSL:10m;
   ssl_session_timeout 10m;
   ssl_session_tickets off;
-  ssl_certificate $SSLPATH/$DOMAIN.crt;
-  ssl_certificate_key $SSLPATH/$DOMAIN.key;
+  ssl_certificate $CERTFILE;
+  ssl_certificate_key $KEYFILE;
   location / {
     root $WEBSITEPATH/site;
     index index.html index.htm;

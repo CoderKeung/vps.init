@@ -66,6 +66,17 @@ function input() {
   echo -e "$BLUE[INPUT]$RESET\c"
 }
 
+function has_package() {
+  local package=`pacman -Qq | grep "$1\$"`
+  if [ $package ]; then
+    ok "Has" "$1"
+  else
+    error "No" "$1"
+    run "Start install" "$1"
+    pacman -S $1
+  fi
+}
+
 function action_domain() {
   ping -c 1 $1 >& /dev/null
   if [ $? -eq 0 ]; then
