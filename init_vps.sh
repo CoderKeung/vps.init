@@ -277,6 +277,19 @@ systemctl enable v2ray
 run "Start " "v2ray"
 systemctl start v2ray
 
+lsmod | grep bbr
+if [ $? -ne 0 ]; then
+  run "Start open google bbr..."
+  modprobe tcp_bbr
+  echo "net.core.default_qdisc=fq" >> /etc/sysctl.conf
+  echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.conf
+  sysctl -p
+  sysctl net.ipv4.tcp_available_congestion_control
+  sysctl net.ipv4.tcp_congestion_control
+  echo "net.core.default_qdisc=fq" >> /etc/sysctl.d/tcp-bbr.conf
+  echo "net.ipv4.tcp_congestion_control=bbr" >> /etc/sysctl.d/tcp-bbr.conf
+fi
+
 ok "Hi! your vps had config..."
 
 echo -e "=============================================="
