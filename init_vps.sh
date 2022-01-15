@@ -137,9 +137,20 @@ EOF
 # CONFIG ACMESH
 #=============================================
 function config_acmesh() {
+  cat > $NGINXSERVER"/"$DOMAIN".conf" <<-EOF
+server {
+  listen 80;
+  listen [::]:80;
+  server_name ${DOMAIN};
+  location / {
+    root $WEBSITEPATH/site;
+    index index.html;
+  }
+}
+EOF
   su - $USERNAME <<-EOF
     acme.sh --set-default-ca --server letsencrypt
-    acme.sh --issue -d $DOMAIN -w $WEBSITEPATH --keylength ec-256 --force
+    acme.sh --issue -d $DOMAIN -w $WEBSITEPATH/site --keylength ec-256 --force
     SSLPATH="$WEBSITEPATH/ssl"
     mkdir -p $SSLPATH
     acme.sh "--install-cert -d ${DOMAIN} --ecc --fullchain-file $SSLPATH/$DOMAIN.crt --key-file $SSLPATH/$DOMAIN.key"
@@ -230,7 +241,7 @@ server {
   listen 80;
   listen [::]:80;
   server_name ${DOMAIN};
-  return 301 https://$server_name:443$request_uri;
+  return 301 https://\$server_name:443\$request_uri;
 }
 
 server {
