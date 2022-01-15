@@ -65,3 +65,14 @@ function notion() {
 function input() {
   echo -e "$BLUE[INPUT]$RESET\c"
 }
+
+function action_domain() {
+  ping -c 1 $1 >& /dev/null
+  if [ $? -eq 0 ]; then
+    local web_ip=`ping -c 1 $1 | awk 'NR==1 {print $3}' | tr -d "()"`
+    local local_ip=`curl ip.gs`
+    if [ $web_ip == $local_ip ]; then
+      IP=${web_ip}
+    fi
+  fi
+}

@@ -30,41 +30,49 @@ function has_v2ray() {
     pacman -S v2ray
   fi
 }
-function has_acmesh() {
-  acme.sh >& /dev/null
-  if [ $? -ne 0 ]; then
+function has_v2ray() {
+  local package=`pacman -Qq | grep "acme.sh"`
+  if [ $package ]; then
     ok "Has" "acme.sh"
   else
     error "No" "acme.sh"
     run "Start install" "acme.sh"
-    input
-    read -r -p "Please input your email: " email
-    curl https://get.acme.sh | sh -s email=$email
-    if [ $SHELL == "/bin/zsh" ]; then
-      source $HOME/.zshrc
-    elif [ $SHELL == "/bin/bash" ]; then
-      source $HOME/.bashrc
-    fi
-    acme.sh --upgrade --auto-upgrade
+    pacman -S acme.sh
   fi
 }
+
 
 #=============================================
 # ADD NEW USER
 #=============================================
 function add_user() {
+  run "Start add a new user..."
   input
   read -r -p "Do you want add a new user? [y|N] " response
   if [[ $response =~ (y|yes|Y) ]]; then
+    while true; do
+      input
+      read -r -p "Please input your username [default:vpsname]: " username
+      id ${username:-"vpsname"} >& /dev/null
+      if [ $? -ne 0 ]; then
+        break
+      fi
+      error "This user has ben create! Please input a new name."
+    done
+    USERNAME=${username:-"vpsname"}
     input
-    read -r -p "Please input your username: " USERNAME
-    input
-    read -r -p "Please input user shell: " USERSHELL
+    read -r -p "Please input user shell [default:/bin/bash]: " usershell
+    USERSHELL=${usershell:-"/bin/bash"}
     useradd -m -s $USERSHELL $USERNAME
     id $USERNAME >& /dev/null
-    if [ $? -ne 0 ]; then
+    if [ $? -eq 0 ]; then
       ok "Success create user" "$USERNAME"
+      USERHOMEPATH="/home/$USERNAME"
     fi
+  else
+    USERNAME=$USER
+    USERSHELL=$SHELL
+    USERHOMEPATH=$HOME
   fi
 }
 
@@ -72,10 +80,57 @@ function add_user() {
 # CONFIG NGINX
 #=============================================
 function config_nginx() {
-  local nginxpath="/etc/nginx"
-  mkdir $nginxpath/servers
-  mv $nginxpath/nginx.conf $nginxpath/nginx.conf.default
-  cp ./file/nginx.conf $nginxpath/nginx.conf
+  NGINXPATH="/etc/nginx"
+  NGINXSERVER=""$NGINXPATH"/servers"
+  if [[ ! -d $NGINXSERVER ]]; then
+    run "Start make new directory: " "$NGINXSERVER"
+    mkdir "$NGINXSERVER"
+    if [[ ! -d $NGINXSERVER ]]; then
+      ok "Make directory " "$NGINXSERVER"
+    fi
+  else
+    ok "Has " $NGINXSERVER
+  fi
+  if [[ ! -f "$NGINXPATH/nginx.conf.default" ]]; then
+    run "Back nginx.conf to nginx.conf.default..."
+    mv "$NGINXPATH/nginx.conf" "$NGINXPATH/nginx.conf.default"
+  else
+    ok "Has " "$NGINXPATH/nginx.conf.default"
+  fi
+    run "Create new nginx.conf..."
+    cat > $NGINXPATH/nginx.conf<<-EOF
+#user http;
+worker_processes  1;
+
+events {
+  worker_connections  1024;
+}
+
+http {
+  include       mime.types;
+  default_type  application/octet-stream;
+  sendfile        on;
+
+  keepalive_timeout  65;
+
+  server {
+    listen       80;
+    server_name  localhost;
+
+    location / {
+      root   /usr/share/nginx/html;
+      index  index.html index.htm;
+    }
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+      root   /usr/share/nginx/html;
+    }
+
+  }
+  include servers/*;
+}
+EOF
 }
 
 #=============================================
@@ -84,39 +139,47 @@ function config_nginx() {
 function config_acmesh() {
   su - $USERNAME <<-EOF
     acme.sh --set-default-ca --server letsencrypt
-    acme.sh --issue -d ${DOMAIN} -w ${WEBSITEPATH} --keylength ec-256 --force
-    SSLPATH="$USERHOMEPATH/website/$WEBSITEPATH/ssl"
+    acme.sh --issue -d $DOMAIN -w $WEBSITEPATH --keylength ec-256 --force
+    SSLPATH="$WEBSITEPATH/ssl"
     mkdir -p $SSLPATH
     acme.sh "--install-cert -d ${DOMAIN} --ecc --fullchain-file $SSLPATH/$DOMAIN.crt --key-file $SSLPATH/$DOMAIN.key"
-  EOF
+EOF
 }
+
+#=============================================
+# GET USER INFOMATION
+#=============================================
+function get_user_info() {
+  input
+  read -r -p "Please input your domain: " domain
+  action_domain $domain
+  if [ $IP ]; then
+    ok "This domain is action" $domain
+    DOMAIN=$domain
+  else
+    error "This domain is no action" $domain
+    exit 1
+  fi
+  input
+  read -r -p "Please input your website path[default: $USERHOMEPATH/website/$DOMAIN]: " websitepath
+  WEBSITEPATH="$USERHOMEPATH/website/${websitepath:-$DOMAIN}"
+  su - $USERNAME -c "mkdir -p $WEBSITEPATH/site"
+  input
+  read -r -p "Please input your v2ray websocket path[default: api]: " websocketpath
+  WEBSOCKETPATH=${websocket:-"api"}
+  su - $USERNAME -c "mkdir -p $WEBSITEPATH/site/$WEBSOCKETPATH"
+  input 
+  read -r -p "Please input your port want to set v2ray[default: 8888]: " port
+  PORT=${port:-"8888"}
+  UUID=`v2ctl uuid`
+}
+
 
 #=============================================
 # START CONFIGURATION
 #=============================================
-has_v2ray
-has_nginx
-has_acmesh
-config_nginx
-add_user
-
-NGINXPATH="/etc/nginx/servers/"
-V2RAYPATH="/etc/v2ray/"
-USERHOMEPATH="/home/$USERNAME"
-
-input
-read -r -p "Please input your domain: " DOMAIN
-input
-read -r -p "Please input your website path[$USERHOMEPATH/website]: " WEBSITEPATH
-input 
-read -r -p "Please input your v2ray websocket path: " WEBSOCKETPATH
-input
-read -r -p "Please input your port want to set v2ray: " PORT
-UUID=`v2ctl uuid`
-
-config_acmesh
-
-cat >$V2RAYPATH"config.json"<<EOF
+V2RAYPATH="/etc/v2ray"
+cat >$V2RAYPATH"/config.json"<<EOF
 {
   "inbounds": [{
     "port": ${PORT},
@@ -125,7 +188,7 @@ cat >$V2RAYPATH"config.json"<<EOF
     "settings": {
       "clients": [
         {
-          "id": "${DOMAIN}",
+          "id": "${UUID}",
           "level": 1,
           "alterId": 0
         }
@@ -153,8 +216,7 @@ cat >$V2RAYPATH"config.json"<<EOF
 }
 EOF
 
-
-cat >$NGINXPATH$DOMAIN.conf <<EOF
+cat >$NGINXSERVER"/"$DOMAIN.conf <<EOF
 server {
   listen 80;
   listen [::]:80;
@@ -178,13 +240,13 @@ server {
   ssl_certificate $SSLPATH/$DOMAIN.crt;
   ssl_certificate_key $SSLPATH/$DOMAIN.key;
   location / {
-    root $USERHOMEPATH/website/$WEBSITEPATH/site;
+    root $WEBSITEPATH/site;
     index index.html index.htm;
   }
 
   location /${WEBSOCKETPATH} {
     if ($http_upgrade != "websocket") { 
-      rewrite ${WEBSOCKETPATH} /index.html last;
+      rewrite /${WEBSOCKETPATH} /index.html last;
     }
     proxy_redirect off;
     proxy_pass http://127.0.0.1:${PORT};
