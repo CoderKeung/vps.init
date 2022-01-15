@@ -30,7 +30,7 @@ function has_v2ray() {
     pacman -S v2ray
   fi
 }
-function has_v2ray() {
+function has_acmesh() {
   local package=`pacman -Qq | grep "acme.sh"`
   if [ $package ]; then
     ok "Has" "acme.sh"
@@ -178,6 +178,15 @@ function get_user_info() {
 #=============================================
 # START CONFIGURATION
 #=============================================
+has_nginx
+has_v2ray
+has_acmesh
+add_user
+config_nginx
+get_user_info
+config_acmesh
+
+
 V2RAYPATH="/etc/v2ray"
 cat >$V2RAYPATH"/config.json"<<EOF
 {
