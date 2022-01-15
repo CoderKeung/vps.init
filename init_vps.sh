@@ -130,6 +130,7 @@ EOF
   ~/.acme.sh/acme.sh  --upgrade  --auto-upgrade
   ~/.acme.sh/acme.sh --set-default-ca --server letsencrypt
   ~/.acme.sh/acme.sh   --issue -d $DOMAIN --keylength ec-256 --pre-hook "systemctl stop nginx" --post-hook "systemctl restart nginx"  --standalone
+  su - $USERNAME -c "mkdir -p $WEBSITEPATH/ssl"
   CERTFILE="$WEBSITEPATH/ssl/${DOMAIN}.crt"
   KEYFILE="$WEBSITEPATH/ssl/${DOMAIN}.key"
   ~/.acme.sh/acme.sh  --install-cert -d $DOMAIN --ecc \
