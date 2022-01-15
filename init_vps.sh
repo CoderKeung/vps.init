@@ -14,6 +14,7 @@ has_package nginx
 has_package v2ray
 has_package socat
 has_package openssl
+has_package curl
 has_package cronie
 
 #=============================================
@@ -179,9 +180,11 @@ config_nginx
 get_user_info
 get_acmesh
 
+run "Chmod o+x $USERHOMEPATH..."
 chmod o+x $USERHOMEPATH
 
 V2RAYPATH="/etc/v2ray"
+run "Start config" "$V2RAYPATH/config.json"
 cat >$V2RAYPATH"/config.json"<<EOF
 {
   "inbounds": [{
@@ -219,6 +222,7 @@ cat >$V2RAYPATH"/config.json"<<EOF
 }
 EOF
 
+run "Start config" "$NGINXSERVER/$DOMAIN.conf"
 cat >$NGINXSERVER"/"$DOMAIN.conf <<EOF
 server {
   listen 80;
@@ -264,6 +268,23 @@ server {
 }
 EOF
 
+run "Restart " "nginx"
 systemctl restart nginx
+
+run "Enable " "v2ray"
 systemctl enable v2ray
+
+run "Start " "v2ray"
 systemctl start v2ray
+
+ok "Hi! your vps had config..."
+
+echo -e "=============================================="
+echo -e "${YELLOW}DOMAIN:${RESET} $DOMAIN"
+echo -e "${YELLOW}WEBSITEPATH:${RESET} $WEBSITEPATH/site"
+echo -e "${YELLOW}WEBSOCKETPATH:${RESET} $WEBSOCKETPATH"
+echo -e "${YELLOW}UUID:${RESET} $UUID"
+echo -e "${YELLOW}IP:${RESET} $IP"
+echo -e "${YELLOW}PORT:${RESET} $PORT"
+echo -e "${YELLOW}USERNAME:${RESET} $USERNAME"
+echo -e "=============================================="
