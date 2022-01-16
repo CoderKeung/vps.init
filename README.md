@@ -1,5 +1,7 @@
 # Initialization new vps script
 
+## File Introduction
+
 [to_arch.sh](./to_arch.sh) : Change your vps to arch. Use [vps2arch](https://github.com/felixonmars/vps2arch)
 
 [init_vps.sh](./init_vps.sh) : The main code
@@ -14,3 +16,20 @@
 - Configuration `v2ray` (ws+tls+web)
   - Website home directory: **$HOME/website/yourcustom/site**
   - Website ssl directory: **$HOME/website/yourcustom/ssl**
+
+## How to use
+
+- Install `git`
+- Then execute sequentially
+
+```bash
+
+git clone https://github.com/CoderKeung/vps.init
+
+cd vps.init
+
+sh to_arch.sh
+
+sh init_vps.sh
+
+```
