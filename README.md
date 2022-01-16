@@ -1,5 +1,9 @@
 # Initialization new vps script
 
+This script will change your vps to `archlinux os`. Then configuration your vps on the `archlinux` .
+
+If your don't want use `archlinux`. This script not for you.
+
 ## File Introduction
 
 [to_arch.sh](./to_arch.sh) : Change your vps to arch. Use [vps2arch](https://github.com/felixonmars/vps2arch)
